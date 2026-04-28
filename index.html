@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaichaN+ Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: #000814; color: white; font-family: sans-serif; }
+        .input-luxury { background: rgba(255,255,255,0.05); border: 1px solid #c5a059; padding: 12px; border-radius: 10px; width: 100%; margin-bottom: 10px; color: white; }
+        .btn-gold { background: #c5a059; color: black; font-weight: bold; padding: 12px; border-radius: 10px; width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8xyH5J923wDob7R4icRpAp3SCbeaXx70",
+            authDomain: "earncash-2b12f.firebaseapp.com",
+            projectId: "earncash-2b12f",
+            storageBucket: "earncash-2b12f.appspot.com",
+            messagingSenderId: "829794818209",
+            appId: "1:829794818209:web:60df663d39c69eadf2f8e0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.signIn = signInWithEmailAndPassword;
+    </script>
+
+    <script type="text/babel">
+        function LoginApp() {
+            const [email, setEmail] = React.useState("");
+            const [pass, setPass] = React.useState("");
+
+            const handleLogin = async () => {
+                if (!email || !pass) {
+                    alert("দয়া করে ইমেইল এবং পাসওয়ার্ড লিখুন!");
+                    return;
+                }
+                try {
+                    await window.signIn(window.auth, email.trim(), pass);
+                    alert("সফলভাবে লগইন হয়েছে!");
+                } catch (error) {
+                    alert("Firebase Error: " + error.message);
+                }
+            };
+
+            return (
+                <div className="flex flex-col items-center justify-center h-screen p-10">
+                    <h1 className="text-3xl font-bold mb-6">PAICHAN<span className="text-[#c5a059]">+</span></h1>
+                    <input 
+                        type="email" 
+                        placeholder="Email" 
+                        className="input-luxury"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                    />
+                    <input 
+                        type="password" 
+                        placeholder="Password" 
+                        className="input-luxury"
+                        value={pass}
+                        onChange={(e) => setPass(e.target.value)}
+                    />
+                    <button onClick={handleLogin} className="btn-gold">SIGN IN</button>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LoginApp />);
+    </script>
+</body>
+</html>
