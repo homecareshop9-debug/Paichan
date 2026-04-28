@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PaichaN+ | Official Launch 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: 'Outfit', sans-serif; background: #000814; color: #fff; margin:0; overflow-x: hidden; }
+        .gold-grad { background: linear-gradient(135deg, #c5a059 0%, #f1d38e 50%, #c5a059 100%); color: #000; }
+        .luxury-card { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(197, 160, 89, 0.15); border-radius: 1.5rem; }
+        .input-luxury { background: rgba(255,255,255,0.03); border: 1px solid rgba(197, 160, 89, 0.2); padding: 14px; border-radius: 14px; outline: none; width: 100%; color: white; font-size: 13px; }
+        .btn-main { padding: 16px; border-radius: 16px; font-weight: 900; text-transform: uppercase; font-size: 11px; width: 100%; cursor: pointer; transition: 0.3s; letter-spacing: 1.5px; }
+        .btn-main:active { transform: scale(0.96); }
+        .modal-full { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000814; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, orderBy, where, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8xyH5J923wDob7R4icRpAp3SCbeaXx70",
+            authDomain: "earncash-2b12f.firebaseapp.com",
+            projectId: "earncash-2b12f",
+            storageBucket: "earncash-2b12f.firebasestorage.app",
+            messagingSenderId: "829794818209",
+            appId: "1:829794818209:web:60df663d39c69eadf2f8e0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+        window.api = { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, orderBy, where, increment };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const categoriesData = [
+            { name: "Electronics", img: "https://cdn-icons-png.flaticon.com/512/3659/3659899.png", subs: ["Mobile", "Laptop", "Watch", "Audio"] },
+            { name: "Fashion", img: "https://cdn-icons-png.flaticon.com/512/3050/3050239.png", subs: ["Men", "Women", "Kids", "Footwear"] },
+            { name: "Home", img: "https://cdn-icons-png.flaticon.com/512/1260/1260370.png", subs: ["Appliances", "Decor", "Furniture"] }
+        ];
+
+        const App = () => {
+            const [view, setView] = useState('loading');
+            const [user, setUser] = useState(null);
+            const [email, setEmail] = useState('');
+            const [pass, setPass] = useState('');
+            const [products, setProducts] = useState([]);
+            const [orders, setOrders] = useState([]);
+            const [banner, setBanner] = useState('');
+            const [selectedProd, setSelectedProd] = useState(null);
+            const [successInfo, setSuccessInfo] = useState(null);
+            
+            const [activeCat, setActiveCat] = useState('Electronics');
+            const [activeSub, setActiveSub] = useState('All');
+            const [form, setForm] = useState({ name: '', price: '', mrp: '', img: '', brand: '', desc: '', category: '', subCategory: '' });
+
+            useEffect(() => {
+                const unsub = window.api.onAuthStateChanged(window.auth, async (u) => {
+                    if (u) {
+                        const snap = await window.api.getDoc(window.api.doc(window.db, "users", u.uid));
+                        const data = { ...snap.data(), uid: u.uid };
+                        setUser(data);
+                        fetchData(data);
+                    } else { setView('login'); }
+                });
+                return () => unsub();
+            }, []);
+
+            const fetchData = (u) => {
+                window.api.onSnapshot(window.api.collection(window.db, "products"), s => setProducts(s.docs.map(d=>({id:d.id, ...d.data()}))));
+                const q = u.role === 'seller' ? window.api.query(window.api.collection(window.db, "orders"), window.api.where("sellerId", "==", u.uid)) : window.api.query(window.api.collection(window.db, "orders"), window.api.where("userId", "==", u.uid));
+                window.api.onSnapshot(q, s => setOrders(s.docs.map(d=>({id:d.id, ...d.data()}))));
+                window.api.onSnapshot(window.api.doc(window.db, "settings", "banner"), d => setBanner(d.data()?.url));
+                
+                if(u.role === 'admin') setView('admin_panel');
+                else if(u.role === 'seller') setView('seller_panel');
+                else setView('customer_home');
+            };
+
+            const handleAuth = async (role) => {
+                try {
+                    if(role === 'login') await window.api.signInWithEmailAndPassword(window.auth, email, pass);
+                    else if(role === 'reset') { await window.api.sendPasswordResetEmail(window.auth, email); alert("Reset link sent!"); }
+                    else {
+                        const res = await window.api.createUserWithEmailAndPassword(window.auth, email, pass);
+                        await window.api.setDoc(window.api.doc(window.db, "users", res.user.uid), { email, role, wallet: 0, createdAt: new Date() });
+                    }
+                } catch (e) { alert(e.message); }
+            };
+
+            const downloadInvoice = (o) => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                doc.setTextColor(197, 160, 89); doc.setFontSize(22); doc.text("PaichaN+ INVOICE", 105, 20, {align:'center'});
+                doc.setTextColor(0); doc.setFontSize(10);
+                doc.text(`Order ID: #${o.id.substring(0,10)}`, 20, 40);
+                doc.text(`Product: ${o.productName}`, 20, 50);
+                doc.text(`Price: INR ${o.price}`, 20, 60);
+                doc.text(`Method: ${o.paymentMethod.toUpperCase()}`, 20, 70);
+                doc.save(`Invoice_${o.id.substring(0,5)}.pdf`);
+            };
+
+            if(view === 'loading') return <div className="h-screen flex items-center justify-center bg-[#000814] text-[#c5a059] font-black italic animate-pulse">PAICHAN+</div>;
+
+            return (
+                <div className="max-w-md mx-auto min-h-screen bg-[#000814] no-scrollbar overflow-x-hidden">
+                    
+                    {/* AUTH: LOGIN & SIGNUP */}
+                    {view === 'login' && (
+                        <div className="p-10 flex flex-col justify-center min-h-screen space-y-6">
+                            <h1 className="text-4xl font-black italic text-center mb-10">PAICHAN<span className="text-[#c5a059]">+</span></h1>
+                            <input className="input-luxury" placeholder="GMAIL ID" onChange={e=>setEmail(e.target.value)} />
+                            <input className="input-luxury" type="password" placeholder="PASSWORD" onChange={e=>setPass(e.target.value)} />
+                            <button onClick={()=>handleAuth('login')} className="gold-grad btn-main">Sign In</button>
+                            <div className="flex justify-between text-[10px] font-black opacity-40 uppercase px-2">
+                                <span onClick={()=>handleAuth('customer')} className="cursor-pointer">New Account</span>
+                                <span onClick={()=>handleAuth('reset')} className="cursor-pointer">Forgot Password</span>
+                            </div>
+                            <button onClick={()=>handleAuth('seller')} className="w-full border border-[#c5a059]/20 p-4 rounded-2xl text-[10px] font-black text-[#c5a059] uppercase tracking-[2px] mt-10">Become a PaichaN Seller</button>
+                        </div>
+                    )}
+
+                    {/* CUSTOMER HOME */}
+                    {view === 'customer_home' && (
+                        <div className="p-6 space-y-6 animate-in">
+                            <div className="flex justify-between items-center">
+                                <h1 className="text-2xl font-black italic">PAICHAN<span className="text-[#c5a059]">+</span></h1>
+                                <button onClick={()=>setView('my_orders')} className="text-[10px] font-black text-[#c5a059]">MY ORDERS</button>
+                            </div>
+
+                            {/* Categories with Icons */}
+                            <div className="flex gap-6 overflow-x-auto no-scrollbar py-2">
+                                {categoriesData.map(cat => (
+                                    <div key={cat.name} onClick={()=>{setActiveCat(cat.name); setActiveSub('All');}} className="flex flex-col items-center min-w-[70px] space-y-2">
+                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center p-4 transition-all ${activeCat === cat.name ? 'gold-grad scale-110' : 'bg-white/5 border border-white/10 opacity-40'}`}>
+                                            <img src={cat.img} className="w-full h-full object-contain" />
+                                        </div>
+                                        <p className={`text-[9px] font-black uppercase ${activeCat === cat.name ? 'text-[#c5a059]' : 'opacity-30'}`}>{cat.name}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <img src={banner || "https://via.placeholder.com/400x150/c5a059/000?text=Premium+Collection"} className="w-full h-36 rounded-3xl object-cover" />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                {products.filter(p => p.category === activeCat).map(p => (
+                                    <div key={p.id} className="luxury-card overflow-hidden" onClick={()=>setSelectedProd(p)}>
+                                        <img src={p.img} className="h-44 w-full object-cover" />
+                                        <div className="p-4">
+                                            <p className="text-[10px] font-bold">₹{p.price}</p>
+                                            <h4 className="text-[9px] opacity-40 uppercase truncate">{p.name}</h4>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MY ORDERS + INVOICE */}
+                    {view === 'my_orders' && (
+                        <div className="p-6 space-y-4">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-black italic">ORDER HISTORY</h2>
+                                <button onClick={()=>setView('customer_home')} className="text-[10px] font-black opacity-30">BACK</button>
+                            </div>
+                            {orders.map(o => (
+                                <div key={o.id} className="luxury-card p-5 flex justify-between items-center">
+                                    <div>
+                                        <p className="text-[11px] font-black uppercase">{o.productName}</p>
+                                        <p className="text-[9px] opacity-40 tracking-widest text-[#c5a059]">{o.paymentMethod.toUpperCase()}</p>
+                                    </div>
+                                    <button onClick={()=>downloadInvoice(o)} className="text-[8px] border border-[#c5a059]/40 p-2 rounded-lg font-black text-[#c5a059]">INVOICE PDF</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* PRODUCT MODAL */}
+                    {selectedProd && (
+                        <div className="modal-full animate-in">
+                            <button onClick={()=>setSelectedProd(null)} className="text-[10px] opacity-40 mb-8 font-black uppercase">Close</button>
+                            <img src={selectedProd.img} className="w-full h-80 object-cover rounded-3xl mb-8 shadow-2xl" />
+                            <p className="text-[10px] text-[#c5a059] font-black tracking-widest uppercase mb-1">{selectedProd.brand}</p>
+                            <h1 className="text-3xl font-black mb-2 italic">{selectedProd.name}</h1>
+                            <p className="text-2xl font-black text-[#c5a059] mb-8">₹{selectedProd.price}</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button onClick={()=>alert("Add Razorpay API for Online Payment")} className="gold-grad btn-main">Pay Online</button>
+                                <button onClick={()=>setView('order_success')} className="bg-white/5 border border-white/10 btn-main">Cash on Delivery</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ORDER SUCCESS SCREEN */}
+                    {view === 'order_success' && (
+                        <div className="modal-full flex flex-col items-center justify-center text-center p-10">
+                            <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mb-6 border border-green-500/30">
+                                <span className="text-4xl text-green-500">✓</span>
+                            </div>
+                            <h2 className="text-3xl font-black italic mb-2 uppercase">Success!</h2>
+                            <p className="text-[10px] opacity-40 font-black tracking-[4px] mb-10">ORDER HAS BEEN CONFIRMED</p>
+                            <button onClick={()=>setView('customer_home')} className="gold-grad btn-main w-72">Continue Shopping</button>
+                        </div>
+                    )}
+
+                    {/* SELLER PANEL */}
+                    {view === 'seller_panel' && (
+                        <div className="p-6 space-y-6">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-xl font-black text-[#c5a059] italic">SELLER STUDIO</h2>
+                                <button onClick={()=>window.api.signOut(window.auth)} className="text-[9px] opacity-30">LOGOUT</button>
+                            </div>
+                            {/* Product Form with Sub-category */}
+                            <div className="luxury-card p-6 space-y-3">
+                                <input className="input-luxury" placeholder="PRODUCT NAME" onChange={e=>setForm({...form, name: e.target.value})} />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <select className="input-luxury" onChange={e=>setForm({...form, category: e.target.value})}>
+                                        <option>Category</option>
+                                        {categoriesData.map(c => <option key={c.name}>{c.name}</option>)}
+                                    </select>
+                                    <select className="input-luxury" onChange={e=>setForm({...form, subCategory: e.target.value})}>
+                                        <option>Sub-Category</option>
+                                        {categoriesData.find(c => c.name === form.category)?.subs.map(s => <option key={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <input className="input-luxury" placeholder="IMAGE URL" onChange={e=>setForm({...form, img: e.target.value})} />
+                                <button onClick={()=>window.api.addDoc(window.api.collection(window.db, "products"), {...form, sellerId: user.uid, createdAt: new Date()})} className="gold-grad btn-main">Post Product</button>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
